@@ -34,27 +34,14 @@ def open_pickle(path):
     x_val, y_val = data['x_val'], data['y_val']
     return x_val, y_val
 
-def shuffle(indata, outdata, vsample, seed=1, lat_grid=4, lon_grid=4):
-    rng = np.random.default_rng(seed)
-
-    outdata = outdata.reshape(42, 165, lat_grid, lon_grid)
-    random_number = indata.shape[1]*indata.shape[2]
-    random_index = rng.choice(random_number, random_number, replace=False)
-
-    train_index = random_index[:-vsample]
-    train_dct = {'model': train_index//indata.shape[2],
-                 'year': train_index%indata.shape[2]}
-    x_train = np.array([ indata[:, m, y] for m, y in zip(
-                         train_dct['model'], train_dct['year']) ])
-    y_train = np.array([ outdata[m, y, :, :] for m, y in zip(
-                         train_dct['model'], train_dct['year']) ])
-
-    val_index = random_index[-vsample:]
-    val_dct = {'model': val_index//indata.shape[2],
-                 'year': val_index%indata.shape[2]}
-    x_val = np.array([ indata[:, m, y] for m, y in zip(
-                         val_dct['model'], train_dct['year']) ])
-    y_val = np.array([ outdata[m, y, :, :] for m, y in zip(
-                         val_dct['model'], train_dct['year']) ])
-    return x_train, y_train, x_val, y_val, train_dct, val_dct
+def train_val_split(indata, outdata, train_num=32, val_num=25):
+    """
+    train: 1958-1989 (32 years)
+    validation: 1990-2014 (25 years)
+    """
+    train_inp = indata[:train_num, :, :]
+    train_out = outdata[:train_num, :, :]
+    val_inp = indata[-val_num:, :, :]
+    val_out = outdata[-val_num:, :, :]
+    return train_inp, train_out, val_inp, val_out
 

@@ -12,25 +12,24 @@ from view import draw_val, show_class, view_accuracy
 from util import transfer_load, train_val_split, _mask
 
 def main():
-    train_flag = False
+    train_flag = True
+    overwrite_flag = True
+    patience_num = 2 # default=1000(no early stop)
 
     TRS = Transfer()
-    predictors, predictand = transfer_load(TRS.new_tors, TRS.new_tand)
-    print(predictors.shape, predictand.shape)
-    exit()
 
     if train_flag is True:
-        predictors, predictant = transfer_load(TRS.new_tors, TRS.new_tand)
-        #px.training(*shuffle(predictors, predictant, px.vsample, px.seed, px.lat_grid, px.lon_grid))
+        predictors, predictand = transfer_load(TRS.new_tors, TRS.new_tand)
+        train_inp, train_out, val_inp, val_out = train_val_split(predictors, predictand)
+        TRS.training(train_inp, train_out, val_inp, val_out, patience_num=patience_num)
         print(f"{TRS.new_weights_dir}: SAVED")
         print(f"{TRS.train_val_path}: SAVED")
     else:
         print(f"train_flag is {train_flag}: not saved")
 
     TRS.validation()
-    TRS.show(val_index=TRS.val_index)
+    TRS._show(val_index=TRS.val_index)
     TRS.label_dist_multigrid()
-
     plt.show()
 
 class Transfer():
@@ -92,7 +91,16 @@ class Transfer():
         for i in range(self.grid_num):
             y_train_px = y_train[:, i]
             y_train_one_hot = tf.keras.utils.to_categorical(y_train_px, self.class_num)
+            y_val_px = y_val[:, i]
+            y_val_one_hot = tf.keras.utils.to_categorical(y_val_px, self.class_num)
+
+            # model load
             model = build_model((self.lat, self.lon, self.var_num), self.class_num)
+            old_weights_path = f"{self.old_weights_dir}/" \
+                               f"class{self.class_num}_epoch{self.old_epochs}_batch{self.old_batch_size}_{i}.h5"
+            model.load_weights(old_weights_path)
+
+            # layer frozen
             model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=0.0001),
                           loss=self.loss,
                           metrics=[self.metrics])
@@ -104,6 +112,9 @@ class Transfer():
                'train_dct': train_dct, 'val_dct': val_dct}
         with open(self.savefile, 'wb') as f:
             pickle.dump(dct, f)
+    #################################################################################
+    # training done
+    ##################################################################################
 
     def validation(self):
         with open(self.savefile, 'rb') as f:
@@ -135,8 +146,8 @@ class Transfer():
         acc = acc.reshape(self.lat_grid, self.lon_grid)
         view_accuracy(acc)
 
-    def show(self, val_index):
-        with open(self.savefile, 'rb') as f:
+    def _show(self, val_index):
+        with open(self.train_val_path, 'rb') as f:
             data = pickle.load(f)
         x_val, y_val = data['x_val'], data['y_val']
         y_val_px = y_val[val_index].reshape(self.lat_grid, self.lon_grid)
