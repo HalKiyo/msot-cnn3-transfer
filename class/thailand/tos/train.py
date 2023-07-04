@@ -10,18 +10,20 @@ import matplotlib.pyplot as plt
 from model3 import build_model
 from view import draw_val, show_class, view_accuracy
 from util import transfer_load, train_val_split, _mask
-from gradcam import grad_cam, show_heatmap, image_preprocess
 
 def main():
     train_flag = False
 
     TRS = Transfer()
+    predictors, predictand = transfer_load(TRS.new_tors, TRS.new_tand)
+    print(predictors.shape, predictand.shape)
+    exit()
 
     if train_flag is True:
         predictors, predictant = transfer_load(TRS.new_tors, TRS.new_tand)
         #px.training(*shuffle(predictors, predictant, px.vsample, px.seed, px.lat_grid, px.lon_grid))
         print(f"{TRS.new_weights_dir}: SAVED")
-        print(f"{TRS.savefile}: SAVED")
+        print(f"{TRS.train_val_path}: SAVED")
     else:
         print(f"train_flag is {train_flag}: not saved")
 
@@ -66,7 +68,7 @@ class Transfer():
         #####################################################
         # do not change here
         ####################################################
-        self.train_val_paht = f"/docker/mnt/d/research/D3/cnn3/transfer/train_val/class/" \
+        self.train_val_path = f"/docker/mnt/d/research/D3/cnn3/transfer/train_val/class/" \
                               f"{self.new_tors}-{self.new_tand}.pickle"
         self.new_weights_dir = f"/docker/mnt/d/research/D3/cnn3/transfer/weights/class/" \
                                f"{self.new_tors}-{self.new_tand}"
@@ -132,24 +134,6 @@ class Transfer():
         acc = np.array(acc)
         acc = acc.reshape(self.lat_grid, self.lon_grid)
         view_accuracy(acc)
-
-    def gradcam(self, px_index, gradcam_index, layer_name):
-        with open(self.savefile, 'rb') as f:
-            data = pickle.load(f)
-        x_val, y_val = data['x_val'], data['y_val']
-        y_val_px = y_val[:, px_index]
-
-        model = build_model((self.lat, self.lon, self.var_num), self.class_num)
-        model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=0.0001),
-                      loss=self.loss, 
-                      metrics=[self.metrics])
-        weights_path = f"{self.weights_dir}/class{self.class_num}_epoch{self.epochs}_batch{self.batch_size}_{px_index}.h5"
-        model.load_weights(weights_path)
-
-        preprocessed_image = image_preprocess(x_val, gradcam_index)
-        heatmap = grad_cam(model, preprocessed_image, y_val[gradcam_index], layer_name,
-                           self.lat, self.lon, self.class_num)
-        show_heatmap(heatmap)
 
     def show(self, val_index):
         with open(self.savefile, 'rb') as f:
