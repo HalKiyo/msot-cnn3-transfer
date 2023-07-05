@@ -12,8 +12,8 @@ from view import draw_val, show_class, view_accuracy
 from util import transfer_load, train_val_split, _mask
 
 def main():
-    train_flag = True
-    overwrite_flag = True
+    train_flag = False
+    overwrite_flag = False
     patience_num = 2 # default=1000(no early stop)
 
     TRS = Transfer()
@@ -81,18 +81,33 @@ class Transfer():
     # training begin
     ######################################################################################################
     def training(self, x_train, y_train, x_val, y_val, patience_num=1000):
+        """
+        y_train: (32, 400)
+        """
         x_train = _mask(x_train)
         x_train = x_train[:, :, :, np.newaxis]
         x_val = _mask(x_val)
         x_val = x_val[:, :, :, np.newaxis]
         y_train = y_train.reshape(len(y_train), self.grid_num)
+        y_train_masked = _mask(y_train)
         y_val = y_val.reshape(len(y_val), self.grid_num)
+        y_val_masked = _mask(y_val)
         os.makedirs(self.new_weights_dir, exist_ok=True) # create weight directory
 
+        # save train_val pickle
+        dct = {'x_train': x_train,
+               'y_train': y_train,
+               'x_val': x_val,
+               'y_val': y_val,
+               }
+        with open(self.train_val_path, 'wb') as f:
+            pickle.dump(dct, f)
+
+        # gridwise training
         for i in range(self.grid_num):
-            y_train_px = y_train[:, i]
+            y_train_px = y_train_masked[:, i]
             y_train_one_hot = tf.keras.utils.to_categorical(y_train_px, self.class_num)
-            y_val_px = y_val[:, i]
+            y_val_px = y_val_masked[:, i]
             y_val_one_hot = tf.keras.utils.to_categorical(y_val_px, self.class_num)
 
             # model load
@@ -126,15 +141,6 @@ class Transfer():
                                f"class{self.class_num}_epoch{self.new_epochs}_batch{self.new_batch_size}_{i}.h5"
             model.save_weights(new_weights_path)
 
-        # save train_val pickle
-        dct = {'x_train': x_train,
-               'y_train': y_train,
-               'x_val': x_val,
-               'y_val': y_val,
-               }
-        with open(self.train_val_path, 'wb') as f:
-            pickle.dump(dct, f)
-
     #################################################################################
     # training done
     ##################################################################################
@@ -144,12 +150,13 @@ class Transfer():
         with open(self.train_val_path, 'rb') as f:
             data = pickle.load(f)
         x_val, y_val = data['x_val'], data['y_val']
+        y_val_masked = _mask(y_val)
 
+        acc = []
         if os.path.exists(self.result_path) is False or overwrite is True:
-            acc = []
+            pred_lst = []
             for i in range(self.grid_num):
-                pred_lst = []
-                y_val_px = y_val[:, i]
+                y_val_px = y_val_masked[:, i]
                 y_val_one_hot = tf.keras.utils.to_categorical(y_val_px, self.class_num)
                 model = build_model((self.lat, self.lon, self.var_num), self.class_num)
                 model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=0.0001),
@@ -165,6 +172,7 @@ class Transfer():
                 print(f"CategoricalAccuracy of pixcel{i}: {result[1]}")
 
             pred_arr = np.array(pred_lst)
+            os.makedirs(self.result_dir, exist_ok=True) 
             np.save(self.result_path, pred_arr)
 
         else:
@@ -175,12 +183,12 @@ class Transfer():
                 val_false = []
 
                 pred_px = load_pred[i, :, :]
-                y_val_px = y_val[:, i]
+                y_val_px = y_val_masked[:, i]
                 for pred, tr in zip(pred_px, y_val_px):
-                    if np.argmax(pred) == np.int(tr):
-                        val_true.append(np.int(tr))
+                    if np.argmax(pred) == int(tr):
+                        val_true.append(int(tr))
                     else:
-                        val_false.append(np.int(tr))
+                        val_false.append(int(tr))
 
                 acc_i = len(val_true)/(len(val_true) + len(val_false))
                 acc_i_round = np.round(acc_i, 2)
