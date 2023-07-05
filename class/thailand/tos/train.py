@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-from model3 import build_model
+from model import build_model
 from view import draw_val, show_class, view_accuracy
 from util import transfer_load, train_val_split, _mask
 
@@ -37,10 +37,11 @@ class Transfer():
         ###################################################
         # change here
         ###################################################
-        self.val_index = 1 #true_index=330, false_index=20
-        self.class_num = 5
+        self.frozen_num = 5
+        self.val_index = 0 # 1990
         self.new_epochs = 200
         self.new_batch_size = 32
+        self.class_num = 5
         self.descrete_mode = 'EFD'
         self.resolution = '1x1' # 1x1 or 5x5_coarse
         self.new_tors = 'tos_coarse_std_Apr'
@@ -51,7 +52,7 @@ class Transfer():
         self.seed = 1
         self.old_epochs = 150
         self.old_batch_size = 256
-        self.old_tors = 'predictors_coarse_std_Apr_msot'
+        self.old_tors = 'predictors_coarse_std_Apr_o'
         self.old_tand = f"pr_{self.resolution}_std_MJJASO_thailand_{self.descrete_mode}_{self.class_num}"
         self.old_weights_dir = f"/docker/mnt/d/research/D2/cnn3/weights/class/" \
                                f"{self.old_tors}-{self.old_tand}"
@@ -76,16 +77,16 @@ class Transfer():
         self.result_path = f"{self.result_dir}" \
                            f"/class{self.class_num}_epoch{self.new_epochs}_batch{self.new_batch_size}.npy"
 
-    ###########################################################
+    ######################################################################################################
     # training begin
-    ##########################################################
+    ######################################################################################################
     def training(self, x_train, y_train, x_val, y_val, patience_num=1000):
         x_train = _mask(x_train)
         x_train = x_train[:, :, :, np.newaxis]
         x_val = _mask(x_val)
         x_val = x_val[:, :, :, np.newaxis]
         y_train = y_train.reshape(len(y_train), self.grid_num)
-        y_val = y_val.reshape(len(y_val, self.grid_num))
+        y_val = y_val.reshape(len(y_val), self.grid_num)
         os.makedirs(self.new_weights_dir, exist_ok=True) # create weight directory
 
         for i in range(self.grid_num):
@@ -101,25 +102,49 @@ class Transfer():
             model.load_weights(old_weights_path)
 
             # layer frozen
+            for layer_num in range(self.frozen_num):
+                model.layers[layer_num].trainable = False
+
+            # model setting
             model.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=0.0001),
                           loss=self.loss,
                           metrics=[self.metrics])
-            his = model.fit(x_train, y_train_one_hot, batch_size=self.batch_size, epochs=self.epochs)
-            weights_path = f"{self.weights_dir}/class{self.class_num}_epoch{self.epochs}_batch{self.batch_size}_{i}.h5"
-            model.save_weights(weights_path)
-        dct = {'x_train': x_train, 'y_train': y_train,
-               'x_val': x_val, 'y_val': y_val,
-               'train_dct': train_dct, 'val_dct': val_dct}
-        with open(self.savefile, 'wb') as f:
+
+            # early stop setting
+            early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience_num)
+            his = model.fit(x_train,
+                            y_train_one_hot,
+                            batch_size=self.new_batch_size,
+                            epochs=self.new_epochs,
+                            validation_data=(x_val, y_val_one_hot),
+                            verbose=1,
+                            callbacks=[early_stop],
+                            )
+
+            # save new_weights path
+            new_weights_path = f"{self.new_weights_dir}/" \
+                               f"class{self.class_num}_epoch{self.new_epochs}_batch{self.new_batch_size}_{i}.h5"
+            model.save_weights(new_weights_path)
+
+        # save train_val pickle
+        dct = {'x_train': x_train,
+               'y_train': y_train,
+               'x_val': x_val,
+               'y_val': y_val,
+               }
+        with open(self.train_val_path, 'wb') as f:
             pickle.dump(dct, f)
+
     #################################################################################
     # training done
     ##################################################################################
 
     def validation(self):
-        with open(self.savefile, 'rb') as f:
+        # load data
+        with open(self.train_val_path, 'rb') as f:
             data = pickle.load(f)
         x_val, y_val = data['x_val'], data['y_val']
+
         pred_lst = []
         acc = []
         for i in range(self.grid_num):
