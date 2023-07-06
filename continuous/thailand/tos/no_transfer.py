@@ -12,12 +12,12 @@ from util import transfer_load, _mask
 from view import acc_map, show_map
 
 def main():
-    overwrite_flag = True
+    overwrite_flag = False
 
     TRS = Transfer()
     TRS.save_pickle()
     print(f"{TRS.train_val_path}: SAVED")
-    TRS.validation(overwrite=overwrite_flag)
+    #TRS.validation(overwrite=overwrite_flag)
     TRS.show(val_index=TRS.val_index)
     plt.show()
 
@@ -26,7 +26,7 @@ class Transfer():
         ###############################################################
         # change here
         ###############################################################
-        self.val_index = 21 # 2011
+        self.val_index = 9 # 2011
         self.resolution = '1x1'
         ###############################################################
         # do not change here

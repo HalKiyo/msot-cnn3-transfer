@@ -13,8 +13,8 @@ from view import acc_map, show_map
 
 def main():
     train_flag = False
-    overwrite_flag = True
-    patience_num = 2 # default=1000(no early stop)
+    overwrite_flag = False
+    patience_num = 20 # default=1000(no early stop)
 
     TRS = Transfer()
     if train_flag is True:
@@ -26,7 +26,7 @@ def main():
     else:
         print(f"train_flag is {train_flag}: not saved")
 
-    TRS.validation(overwrite=overwrite_flag)
+    #TRS.validation(overwrite=overwrite_flag)
     TRS.show(val_index=TRS.val_index)
     plt.show()
 
@@ -36,8 +36,8 @@ class Transfer():
         # change here
         ###############################################################
         self.frozen_num = 5
-        self.val_index = 21 # 2011
-        self.new_epochs = 150
+        self.val_index = 24 # 2011
+        self.new_epochs = 30
         self.new_batch_size = 32
         self.resolution = '1x1'
         ###############################################################
