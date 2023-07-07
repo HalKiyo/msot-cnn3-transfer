@@ -15,8 +15,8 @@ def main():
     overwrite_flag = False
 
     TRS = Transfer()
-    TRS.save_pickle()
-    print(f"{TRS.train_val_path}: SAVED")
+    #TRS.save_pickle()
+    #print(f"{TRS.train_val_path}: SAVED")
     #TRS.validation(overwrite=overwrite_flag)
     TRS.show(val_index=TRS.val_index)
     plt.show()
@@ -26,7 +26,7 @@ class Transfer():
         ###############################################################
         # change here
         ###############################################################
-        self.val_index = 9 # 2011
+        self.val_index = 57 # 0 = 1958
         self.resolution = '1x1'
         ###############################################################
         # do not change here

@@ -12,21 +12,30 @@ from util import transfer_load, _mask, train_val_split
 from view import acc_map, show_map
 
 def main():
-    train_flag = False
-    overwrite_flag = False
-    patience_num = 20 # default=1000(no early stop)
+    #################################################
+    #edit here
+    #################################################
+    train_flag = True
+    overwrite_flag = True
+    patience_num = 2 # default=1000(no early stop)
+    train_num = 16 # 16: 1958-1973
+    val_num = 41 # 41: 1974-2014
+    #################################################
 
     TRS = Transfer()
     if train_flag is True:
         predictors, predictand = transfer_load(TRS.new_tors, TRS.new_tand)
-        train_inp, train_out, val_inp, val_out = train_val_split(predictors, predictand)
+        train_inp, train_out, val_inp, val_out = train_val_split(predictors, 
+                                                                 predictand, 
+                                                                 train_num=train_num,
+                                                                 val_num=val_num)
         TRS.training(train_inp, train_out, val_inp, val_out, patience_num=patience_num)
         print(f"{TRS.new_weights_dir}: SAVED")
         print(f"{TRS.train_val_path}: SAVED")
     else:
         print(f"train_flag is {train_flag}: not saved")
 
-    #TRS.validation(overwrite=overwrite_flag)
+    TRS.validation(overwrite=overwrite_flag)
     TRS.show(val_index=TRS.val_index)
     plt.show()
 
@@ -44,8 +53,8 @@ class Transfer():
         # do not change here
         ###############################################################
         self.var_num = 1
-        self.new_tors = 'tos_coarse_std_Apr'
-        self.new_tand = f"aphro_{self.resolution}_coarse_std_MJJASO_thailand"
+        self.new_tors = 'tos_coarse_std_Jul'
+        self.new_tand = f"aphro_{self.resolution}_coarse_std_Aug_thailand"
         ###############################################################
         # do not change here
         ###############################################################

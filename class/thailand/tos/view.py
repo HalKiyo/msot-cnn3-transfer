@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import colormaps as clm
 import matplotlib.colors as colors
 import cartopy.crs as ccrs
 
@@ -79,12 +80,14 @@ def show_class(image, class_num=5, lat_grid=4, lon_grid=4, txt_flag=False):
 
     plt.show(block=False)
 
-def view_accuracy(acc, lat_grid=4, lon_grid=4):
+def view_accuracy(acc, lat_grid=4, lon_grid=4, vmin=0, vmax=0.7, steps=7, write_txt=False):
+    plt.rcParams["font.size"] = 18
     projection = ccrs.PlateCarree(central_longitude=180)
     img_extent = (-90, -70, 5, 25) # location = (N5-25, E90-110)
-    dlt = 2
-    txt_extent = (img_extent[0] + dlt, img_extent[1] - dlt,
-                  img_extent[2] + dlt, img_extent[3] - dlt)
+
+    mpl.colormaps.unregister('sandbox')
+    mpl.colormaps.register(clm.temps, name='sandbox')
+    cm = plt.cm.get_cmap('sandbox', steps)
 
     fig = plt.figure()
     ax = plt.subplot(projection=projection)
@@ -93,15 +96,20 @@ def view_accuracy(acc, lat_grid=4, lon_grid=4):
                      origin='upper',
                      extent=img_extent,
                      transform=projection,
-                     vmin=0, vmax=1,
-                     cmap='Oranges')
+                     vmin=vmin, vmax=vmax,
+                     cmap=cm,
+                     )
 
-    lat_lst = np.linspace(txt_extent[3], txt_extent[2], lat_grid)
-    lon_lst = np.linspace(txt_extent[0], txt_extent[1], lon_grid)
-    for i, lat in enumerate(lat_lst):
-        for j, lon in enumerate(lon_lst):
-            ax.text(lon, lat, acc[i,j],
-                    ha="center", va="center", color='white', fontsize='15')
+    if write_txt is True:
+        dlt = 2
+        txt_extent = (img_extent[0] + dlt, img_extent[1] - dlt,
+                      img_extent[2] + dlt, img_extent[3] - dlt)
+        lat_lst = np.linspace(txt_extent[3], txt_extent[2], lat_grid)
+        lon_lst = np.linspace(txt_extent[0], txt_extent[1], lon_grid)
+        for i, lat in enumerate(lat_lst):
+            for j, lon in enumerate(lon_lst):
+                ax.text(lon, lat, acc[i,j],
+                        ha="center", va="center", color='white', fontsize='15')
     cbar = fig.colorbar(mat, ax=ax)
     plt.rcParams["font.size"] = 18
     plt.show(block=False)
