@@ -12,12 +12,12 @@ from util import transfer_load, _mask
 from view import acc_map, show_map
 
 def main():
-    overwrite_flag = False
+    overwrite_flag = True
 
     TRS = Transfer()
     #TRS.save_pickle()
     #print(f"{TRS.train_val_path}: SAVED")
-    #TRS.validation(overwrite=overwrite_flag)
+    TRS.validation(overwrite=overwrite_flag)
     TRS.show(val_index=TRS.val_index)
     plt.show()
 
@@ -26,7 +26,7 @@ class Transfer():
         ###############################################################
         # change here
         ###############################################################
-        self.val_index = 57 # 0 = 1958
+        self.val_index = 56 # 0 = 1958
         self.resolution = '1x1'
         ###############################################################
         # do not change here
@@ -48,6 +48,7 @@ class Transfer():
         ###############################################################
         self.old_epochs = 100
         self.old_batch_size = 256
+        self.patience_num = 1000
         self.old_tors = 'predictors_coarse_std_Apr_o'
         self.old_tand = f"pr_{self.resolution}_std_MJJASO_thailand"
         self.old_weights_dir = f"/docker/mnt/d/research/D2/cnn3/weights/continuous/" \
@@ -96,7 +97,7 @@ class Transfer():
                               loss=self.loss,
                               metrics=[self.metrics])
                 old_weights_path = f"{self.old_weights_dir}/" \
-                               f"epoch{self.old_epochs}_batch{self.old_batch_size}_{i}.h5"
+                               f"epoch{self.old_epochs}_batch{self.old_batch_size}_patience{self.patience_num}_{i}.h5"
                 model.load_weights(old_weights_path)
 
                 pred = model.predict(x_val) # (400, 1000)

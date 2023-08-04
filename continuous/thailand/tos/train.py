@@ -17,7 +17,7 @@ def main():
     #################################################
     train_flag = True
     overwrite_flag = True
-    patience_num = 2 # default=1000(no early stop)
+    new_patience_num = 2 # default=1000(no early stop)
     train_num = 16 # 16: 1958-1973
     val_num = 41 # 41: 1974-2014
     #################################################
@@ -29,7 +29,7 @@ def main():
                                                                  predictand, 
                                                                  train_num=train_num,
                                                                  val_num=val_num)
-        TRS.training(train_inp, train_out, val_inp, val_out, patience_num=patience_num)
+        TRS.training(train_inp, train_out, val_inp, val_out, patience_num=new_patience_num)
         print(f"{TRS.new_weights_dir}: SAVED")
         print(f"{TRS.train_val_path}: SAVED")
     else:
@@ -66,6 +66,7 @@ class Transfer():
         self.metrics = tf.keras.metrics.MeanSquaredError()
         self.old_epochs = 100
         self.old_batch_size = 256
+        self.old_patience_num = 1000
         self.old_tors = 'predictors_coarse_std_Apr_o'
         self.old_tand = f"pr_{self.resolution}_std_MJJASO_thailand"
         self.old_weights_dir = f"/docker/mnt/d/research/D2/cnn3/weights/continuous/" \
@@ -104,7 +105,7 @@ class Transfer():
             # model load
             model = build_model((self.lat, self.lon, self.var_num))
             old_weights_path = f"{self.old_weights_dir}/" \
-                               f"epoch{self.old_epochs}_batch{self.old_batch_size}_{i}.h5"
+                               f"epoch{self.old_epochs}_batch{self.old_batch_size}_patience{self.old_patience_num}_{i}.h5"
             model.load_weights(old_weights_path)
 
             # layer frozen 
